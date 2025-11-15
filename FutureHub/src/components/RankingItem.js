@@ -36,19 +36,14 @@ const RankingItem = ({ user, position, theme, isCurrentUser }) => {
       ]}
     >
       {/* Posição */}
-      <View style={styles.positionContainer}>
-        <Ionicons 
-          name={getMedalIcon(position)} 
-          size={28} 
-          color={getMedalColor(position)} 
-        />
+      <View style={[styles.positionContainer, { backgroundColor: getMedalColor(position) + '20' }]}>
         <Text style={[styles.position, { color: getMedalColor(position) }]}>
-          #{position}
+          {position}
         </Text>
       </View>
 
       {/* Avatar */}
-      <View style={[styles.avatar, { backgroundColor: badge.color }]}>
+      <View style={[styles.avatar, { backgroundColor: badge.color, borderColor: '#fff', borderWidth: 2 }]}>
         <Text style={styles.avatarText}>
           {user.nome?.charAt(0).toUpperCase() || 'U'}
         </Text>
@@ -104,28 +99,31 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-    elevation: 2,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
   positionContainer: {
     alignItems: 'center',
-    width: 50,
+    justifyContent: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
   },
   position: {
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 2,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

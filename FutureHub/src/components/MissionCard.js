@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const MissionCard = ({ mission, theme, onPress }) => {
   const getAreaColor = (areaId) => {
@@ -22,59 +21,49 @@ const MissionCard = ({ mission, theme, onPress }) => {
 
   return (
     <TouchableOpacity 
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.surface }]}
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <LinearGradient
-        colors={[theme.surface, theme.primary[900]]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradient}
-      >
-        <View style={[styles.badge, { backgroundColor: areaColor }]}>
-          <Ionicons name="flash" size={16} color="#fff" />
+      <View style={[styles.badge, { backgroundColor: areaColor }]}>
+        <Ionicons name="flash" size={16} color="#fff" />
+      </View>
+
+      <Text style={[styles.title, { color: theme.text.primary }]}>
+        {mission.titulo}
+      </Text>
+      
+      <Text style={[styles.description, { color: theme.text.secondary }]}>
+        {mission.descricao}
+      </Text>
+
+      <View style={styles.footer}>
+        <View style={styles.moralContainer}>
+          <Ionicons name="heart-outline" size={16} color={theme.accent[500]} />
+          <Text style={[styles.moral, { color: theme.text.secondary }]}>
+            {mission.moral}
+          </Text>
         </View>
 
-        <Text style={[styles.title, { color: theme.text.primary }]}>
-          {mission.titulo}
-        </Text>
-        
-        <Text style={[styles.description, { color: theme.text.secondary }]}>
-          {mission.descricao}
-        </Text>
-
-        <View style={styles.footer}>
-          <View style={styles.moralContainer}>
-            <Ionicons name="heart-outline" size={16} color={theme.accent[500]} />
-            <Text style={[styles.moral, { color: theme.text.secondary }]}>
-              {mission.moral}
-            </Text>
-          </View>
-
-          <View style={[styles.actionButton, { backgroundColor: areaColor }]}>
-            <Text style={styles.actionText}>Aceitar Missão</Text>
-            <Ionicons name="arrow-forward" size={16} color="#fff" />
-          </View>
+        <View style={[styles.actionButton, { backgroundColor: areaColor }]}>
+          <Text style={styles.actionText}>Aceitar Missão</Text>
+          <Ionicons name="arrow-forward" size={16} color="#fff" />
         </View>
-      </LinearGradient>
+      </View>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 15,
-    borderRadius: 16,
-    overflow: 'hidden',
-    elevation: 4,
+    marginBottom: 16,
+    borderRadius: 18,
+    padding: 22,
+    elevation: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-  },
-  gradient: {
-    padding: 20,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
   },
   badge: {
     position: 'absolute',
@@ -115,8 +104,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 12,
     gap: 8,
   },
   actionText: {

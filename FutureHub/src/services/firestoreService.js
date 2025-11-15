@@ -162,19 +162,21 @@ export const getIdeasByArea = async (area, limitCount = 20) => {
   try {
     const q = query(
       collection(db, 'ideias'),
-      where('area', '==', area),
       orderBy('createdAt', 'desc'),
-      limit(limitCount)
+      limit(limitCount * 2)
     );
     
     const querySnapshot = await getDocs(q);
     const ideas = [];
     
     querySnapshot.forEach((doc) => {
-      ideas.push({ id: doc.id, ...doc.data() });
+      const ideaData = { id: doc.id, ...doc.data() };
+      if (ideaData.area === area) {
+        ideas.push(ideaData);
+      }
     });
     
-    return { success: true, data: ideas };
+    return { success: true, data: ideas.slice(0, limitCount) };
   } catch (error) {
     console.error('Erro ao buscar ideias:', error);
     return { success: false, error };

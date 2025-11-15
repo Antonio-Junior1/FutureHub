@@ -109,14 +109,14 @@ const IdeaCard = ({ idea, theme, onLike, onRate, isLiked, currentUserId }) => {
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 15,
-    elevation: 2,
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 16,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
   },
   header: {
     flexDirection: 'row',
@@ -124,9 +124,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -148,14 +148,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   areaBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: 'bold',
     marginBottom: 8,
   },
