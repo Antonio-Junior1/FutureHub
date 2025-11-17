@@ -120,7 +120,7 @@ const RankingScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <LinearGradient
-        colors={[theme.primary[400], theme.background]}
+        colors={[theme.primary[900], theme.background]}
         style={styles.gradient}
       >
         <ScrollView

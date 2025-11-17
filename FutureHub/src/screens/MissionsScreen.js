@@ -6,7 +6,8 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +16,7 @@ import { useUser } from '../contexts/UserContext';
 import MissionCard from '../components/MissionCard';
 import { MISSIONS, getRandomMission } from '../data/missions';
 import { getUserCompletedMissions } from '../services/firestoreService';
+import { buscarMissoes, gerarNovasMissoes, converterMissoesParaApp } from '../services/missoesApiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MissionsScreen = ({ navigation }) => {
@@ -22,6 +24,8 @@ const MissionsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [completedMissions, setCompletedMissions] = useState([]);
+  const [fromCache, setFromCache] = useState(false);
+  const [generating, setGenerating] = useState(false);
   
   const scheme = useColorScheme();
   const theme = scheme === 'dark' ? darkTheme : lightTheme;
@@ -38,35 +42,49 @@ const MissionsScreen = ({ navigation }) => {
     }
 
     try {
-      // Buscar missões concluídas do Firestore
-      const completedResult = await getUserCompletedMissions(user.uid);
-      const completed = completedResult.success ? completedResult.data : [];
-      setCompletedMissions(completed);
+      // Buscar missões da API
+      const apiResult = await buscarMissoes();
+      
+      if (apiResult.success) {
+        // Converter missões da API para o formato do app
+        const missoesConvertidas = converterMissoesParaApp(apiResult.data);
+        
+        // Filtrar missões baseadas nos interesses do usuário
+        const generatedMissions = [];
+        for (const interest of userProfile.interesses) {
+          if (missoesConvertidas[interest] && missoesConvertidas[interest].length > 0) {
+            generatedMissions.push(missoesConvertidas[interest][0]);
+          }
+        }
 
-      // Buscar missões já exibidas do AsyncStorage
-      const shownMissionsStr = await AsyncStorage.getItem(`shown_missions_${user.uid}`);
-      const shownMissions = shownMissionsStr ? JSON.parse(shownMissionsStr) : [];
+        setMissions(generatedMissions);
+        setFromCache(apiResult.fromCache || false);
+      } else {
+        // Fallback: usar missões estáticas do arquivo local
+        console.log('Usando missões estáticas (fallback)');
+        const generatedMissions = [];
+        for (const interest of userProfile.interesses) {
+          const mission = getRandomMission(interest);
+          if (mission) {
+            generatedMissions.push(mission);
+          }
+        }
+        setMissions(generatedMissions);
+        setFromCache(false);
+      }
 
-      // Gerar missões para cada área de interesse
+    } catch (error) {
+      console.error('Erro ao carregar missões:', error);
+      
+      // Fallback: usar missões estáticas
       const generatedMissions = [];
       for (const interest of userProfile.interesses) {
-        const mission = getRandomMission(interest, [...completed, ...shownMissions]);
+        const mission = getRandomMission(interest);
         if (mission) {
           generatedMissions.push(mission);
         }
       }
-
       setMissions(generatedMissions);
-
-      // Salvar IDs das missões exibidas
-      const newShownMissions = generatedMissions.map(m => m.id);
-      await AsyncStorage.setItem(
-        `shown_missions_${user.uid}`, 
-        JSON.stringify([...shownMissions, ...newShownMissions])
-      );
-
-    } catch (error) {
-      console.error('Erro ao carregar missões:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -76,6 +94,54 @@ const MissionsScreen = ({ navigation }) => {
   const handleRefresh = () => {
     setRefreshing(true);
     loadMissions();
+  };
+
+  const handleGenerateNew = async () => {
+    Alert.alert(
+      'Gerar Novas Missões',
+      'Deseja gerar novas missões usando IA? Isso pode levar alguns segundos.',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Gerar',
+          onPress: async () => {
+            setGenerating(true);
+            try {
+              const result = await gerarNovasMissoes();
+              
+              if (result.success) {
+                Alert.alert(
+                  'Sucesso!',
+                  'Novas missões foram geradas com sucesso!',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => loadMissions(),
+                    },
+                  ]
+                );
+              } else {
+                Alert.alert(
+                  'Erro',
+                  'Não foi possível gerar novas missões. Tente novamente mais tarde.'
+                );
+              }
+            } catch (error) {
+              console.error('Erro ao gerar missões:', error);
+              Alert.alert(
+                'Erro',
+                'Ocorreu um erro ao gerar novas missões.'
+              );
+            } finally {
+              setGenerating(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleMissionPress = (mission) => {
@@ -136,43 +202,65 @@ const MissionsScreen = ({ navigation }) => {
               Suas Missões do Dia
             </Text>
           </View>
-          <TouchableOpacity 
-            style={[styles.refreshButton, { backgroundColor: theme.secondary[500] }]}
-            onPress={handleRefresh}
-          >
-            <Ionicons name="refresh" size={24} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity 
+              style={[styles.iconButton, { backgroundColor: theme.accent[500] }]}
+              onPress={handleGenerateNew}
+              disabled={generating}
+            >
+              {generating ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="sparkles" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.iconButton, { backgroundColor: theme.secondary[500] }]}
+              onPress={handleRefresh}
+            >
+              <Ionicons name="refresh" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* Cache Info */}
+        {fromCache && (
+          <View style={[styles.cacheInfo, { backgroundColor: theme.primary[800] }]}>
+            <Ionicons name="cloud-offline-outline" size={20} color={theme.accent[500]} />
+            <Text style={[styles.cacheText, { color: theme.text.inverse }]}>
+              Exibindo missões do cache (offline)
+            </Text>
+          </View>
+        )}
 
         {/* Info Card */}
         <View style={[styles.infoCard, { backgroundColor: theme.primary[900] }]}>
           <Ionicons name="information-circle" size={24} color={theme.accent[500]} />
           <Text style={[styles.infoText, { color: theme.text.inverse }]}>
-            Complete missões e publique suas ideias para ganhar pontos e subir no ranking!
+            Complete missões para ganhar pontos e subir no ranking! Use o botão ✨ para gerar novas missões com IA.
           </Text>
         </View>
 
         {/* Missões */}
-        {missions.length > 0 ? (
-          missions.map((mission) => (
-            <MissionCard
-              key={mission.id}
-              mission={mission}
-              theme={theme}
-              onPress={() => handleMissionPress(mission)}
-            />
-          ))
-        ) : (
-          <View style={styles.emptyMissions}>
-            <Ionicons name="checkmark-circle" size={60} color={theme.success} />
-            <Text style={[styles.emptyMissionsText, { color: theme.text.primary }]}>
-              Você completou todas as missões disponíveis!
-            </Text>
-            <Text style={[styles.emptyMissionsSubtext, { color: theme.text.secondary }]}>
-              Puxe para baixo para atualizar
-            </Text>
-          </View>
-        )}
+        <View style={styles.missionsContainer}>
+          {missions.length > 0 ? (
+            missions.map((mission) => (
+              <MissionCard
+                key={mission.id}
+                mission={mission}
+                theme={theme}
+                onPress={() => handleMissionPress(mission)}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyMissions}>
+              <Ionicons name="checkmark-circle-outline" size={60} color={theme.text.secondary} />
+              <Text style={[styles.emptyMissionsText, { color: theme.text.secondary }]}>
+                Nenhuma missão disponível no momento
+              </Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -195,25 +283,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   greeting: {
     fontSize: 16,
-    marginBottom: 5,
+    marginBottom: 4,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
   },
-  refreshButton: {
+  iconButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  infoCard: {
+  cacheInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 15,
+    gap: 10,
+  },
+  cacheText: {
+    fontSize: 14,
+    flex: 1,
+  },
+  infoCard: {
+    flexDirection: 'row',
+    padding: 16,
     borderRadius: 12,
     marginBottom: 20,
     gap: 12,
@@ -223,6 +326,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  missionsContainer: {
+    gap: 15,
+  },
+  emptyMissions: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyMissionsText: {
+    fontSize: 16,
+    marginTop: 12,
+    textAlign: 'center',
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -230,7 +345,7 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     marginTop: 20,
     marginBottom: 10,
@@ -239,13 +354,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     textAlign: 'center',
-    lineHeight: 24,
     marginBottom: 30,
+    lineHeight: 24,
   },
   button: {
     paddingHorizontal: 30,
     paddingVertical: 15,
-    borderRadius: 12,
+    borderRadius: 25,
   },
   buttonText: {
     color: '#fff',
@@ -258,24 +373,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 15,
+    marginTop: 12,
     fontSize: 16,
-  },
-  emptyMissions: {
-    alignItems: 'center',
-    padding: 40,
-    marginTop: 40,
-  },
-  emptyMissionsText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 20,
-    textAlign: 'center',
-  },
-  emptyMissionsSubtext: {
-    fontSize: 14,
-    marginTop: 10,
-    textAlign: 'center',
   },
 });
 
